@@ -5,21 +5,56 @@ const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const backdrop=$('#bookingBackdrop');
 let state={pro:null,service:null,date:null,time:null,promoFlow:null};
 const categoryToPro={cilios:'grazielle',cabelo:'ana',nail:'nail'};
+
 $('#menuToggle')?.addEventListener('click',()=>$('#mainNav').classList.toggle('open'));
 $$('nav a').forEach(a=>a.addEventListener('click',()=>$('#mainNav').classList.remove('open')));
 $$('[data-open-booking]').forEach(b=>b.addEventListener('click',()=>openBooking()));
 $$('[data-category-booking]').forEach(b=>b.addEventListener('click',()=>openBooking(b.dataset.categoryBooking)));
 $$('.professional-card').forEach(c=>c.addEventListener('click',e=>{if(!e.target.closest('button')) openBooking(c.dataset.category)}));
+
 renderPublicPromos();
 $('#bookingClose').addEventListener('click',closeBooking);
 backdrop.addEventListener('click',e=>{if(e.target===backdrop)closeBooking()});
+
 function getProfessionals(){const d=db();return d?.professionals?.filter(p=>p.active!==false)||[]}
-function renderPublicPromos(){const section=$('#promocoes');if(!section)return;let list=section.querySelector('.live-promos');if(!list){list=document.createElement('div');list.className='live-promos';section.querySelector('.promo-inner').appendChild(list)}const pros=getProfessionals().filter(p=>p.promo);list.innerHTML=pros.length?pros.map(p=>{const partner=getProfessionals().find(x=>x.id===p.promoPartnerId);return `<article class="live-promo-card"><strong>${esc(p.promo)}</strong><p>${esc(p.name)}${partner?` + ${esc(partner.name)}`:''}</p>${partner?'<small>✨ Combo em parceria: você agenda os dois serviços em sequência.</small>':''}${p.promoTerms?`<small>${esc(p.promoTerms)}</small>`:''}<button class="button" data-promo-book="${esc(p.id)}">${partner?'Agendar combo →':'Agendar promoção →'}</button></article>`}).join(''):'<p class="promo-empty">As ofertas publicadas pelas profissionais aparecerão aqui.</p>';list.querySelectorAll('[data-promo-book]').forEach(b=>b.addEventListener('click',()=>openPromoBooking(b.dataset.promoBook)))}
-function openPromoBooking(id){const p=getProfessionals().find(x=>x.id===id);if(!p)return;const partner=p.promoPartnerId?getProfessionals().find(x=>x.id===p.promoPartnerId):null;state={pro:p.id,service:null,date:null,time:null,promoFlow:partner?{originProId:p.id,partnerProId:partner.id,currentIndex:0,selections:[],client:null}:null};backdrop.hidden=false;document.body.style.overflow='hidden';renderBooking()}
+
+function renderPublicPromos(){
+  const section=$('#promocoes');if(!section)return;
+  let list=section.querySelector('.live-promos');
+  if(!list){list=document.createElement('div');list.className='live-promos';section.querySelector('.promo-inner').appendChild(list)}
+  const pros=getProfessionals().filter(p=>p.promo);
+  list.innerHTML=pros.length?pros.map(p=>{
+    const partner=getProfessionals().find(x=>x.id===p.promoPartnerId);
+    return `<article class="live-promo-card"><strong>${esc(p.promo)}</strong><p>${esc(p.name)}${partner?` + ${esc(partner.name)}`:''}</p>${partner?'<small>✨ Combo em parceria: você agenda os dois serviços em sequência.</small>':''}${p.promoTerms?`<small>${esc(p.promoTerms)}</small>`:''}<button class="button" data-promo-book="${esc(p.id)}">${partner?'Agendar combo →':'Agendar promoção →'}</button></article>`
+  }).join(''):'<p class="promo-empty">As ofertas publicadas pelas profissionais aparecerão aqui.</p>';
+  list.querySelectorAll('[data-promo-book]').forEach(b=>b.addEventListener('click',()=>openPromoBooking(b.dataset.promoBook)));
+}
+
+function openPromoBooking(id){
+  const p=getProfessionals().find(x=>x.id===id);if(!p)return;
+  const partner=p.promoPartnerId?getProfessionals().find(x=>x.id===p.promoPartnerId):null;
+  state={pro:p.id,service:null,date:null,time:null,promoFlow:partner?{originProId:p.id,partnerProId:partner.id,currentIndex:0,selections:[],client:null}:null};
+  backdrop.hidden=false;document.body.style.overflow='hidden';renderBooking();
+}
+
 function openBookingById(id){openPromoBooking(id)}
-function openBooking(category=null){state={pro:categoryToPro[category]||null,service:null,date:null,time:null,promoFlow:null};backdrop.hidden=false;document.body.style.overflow='hidden';renderBooking()}
-function closeBooking(){backdrop.hidden=true;document.body.style.overflow='';state={pro:null,service:null,date:null,time:null,promoFlow:null}}
-function currentPromoPro(){if(!state.promoFlow)return null;const ids=[state.promoFlow.originProId,state.promoFlow.partnerProId];return getProfessionals().find(p=>p.id===ids[state.promoFlow.currentIndex])||null}
+
+function openBooking(category=null){
+  state={pro:categoryToPro[category]||null,service:null,date:null,time:null,promoFlow:null};
+  backdrop.hidden=false;document.body.style.overflow='hidden';renderBooking();
+}
+
+function closeBooking(){
+  backdrop.hidden=true;document.body.style.overflow='';
+  state={pro:null,service:null,date:null,time:null,promoFlow:null};
+}
+
+function currentPromoPro(){
+  if(!state.promoFlow)return null;
+  const ids=[state.promoFlow.originProId,state.promoFlow.partnerProId];
+  return getProfessionals().find(p=>p.id===ids[state.promoFlow.currentIndex])||null;
+}
+
 function renderBooking(){
  const pros=getProfessionals();
  if(state.promoFlow){
@@ -34,22 +69,40 @@ function renderBooking(){
  if(!p){clearBookingSteps();return}
  renderProfessionalBooking(p,false);
 }
-function clearBookingSteps(){$('#serviceStep').innerHTML='<div class="empty-state">Escolha uma profissional para ver os serviços.</div>';$('#dateStep').innerHTML='';$('#timeStep').innerHTML='';$('#clientStep').hidden=true}
+
+function clearBookingSteps(){
+  $('#serviceStep').innerHTML='<div class="empty-state">Escolha uma profissional para ver os serviços.</div>';
+  $('#dateStep').innerHTML='';$('#timeStep').innerHTML='';$('#clientStep').hidden=true;
+}
+
 function renderProfessionalBooking(p,isPromo){
  if(!p){clearBookingSteps();return}
  const promo=state.promoFlow;
  const stepTitle=isPromo?`<div class="promo-current"><b>Agora: ${esc(p.name)}</b><span>Escolha o serviço, a data e o horário.</span></div>`:'';
- $('#serviceStep').innerHTML=`${stepTitle}<div class="step-title">01 · ESCOLHA O SERVIÇO</div><div class="service-grid">${(p.services||[]).map((s,i)=>{const photo=s.photo?`<img class="service-photo" src="${s.photo}" alt="${esc(s.name)}">`:'<div class="service-photo no-photo">♡</div>';return `<button class="service-choice ${state.service===i?'active':''}" data-service="${i}">${photo}<span><b>${esc(s.name)}</b><span>${money(s.price)}</span></span></button>`}).join('')}</div>`;
+ 
+ // Correção implementada: trata o caminho da foto para remover referências à pasta 'assets/' inexistente
+ $('#serviceStep').innerHTML=`${stepTitle}<div class="step-title">01 · ESCOLHA O SERVIÇO</div><div class="service-grid">${(p.services||[]).map((s,i)=>{
+   const cleanPhoto = s.photo ? s.photo.replace(/^assets\//, '') : '';
+   const photo=cleanPhoto?`<img class="service-photo" src="${cleanPhoto}" alt="${esc(s.name)}">`:'<div class="service-photo no-photo">♡</div>';
+   return `<button class="service-choice ${state.service===i?'active':''}" data-service="${i}">${photo}<span><b>${esc(s.name)}</b><span>${money(s.price)}</span></span></button>`
+ }).join('')}</div>`;
+ 
  $$('[data-service]').forEach(b=>b.onclick=()=>{state.service=Number(b.dataset.service);state.date=null;state.time=null;renderBooking()});
  if(state.service===null){$('#dateStep').innerHTML='';$('#timeStep').innerHTML='';$('#clientStep').hidden=true;return}
+ 
  const s=p.services[state.service];
  const avail=(p.availability||[]).filter(a=>Array.isArray(a.times)&&a.times.length).map(a=>a.date).filter(Boolean).sort();
  $('#dateStep').innerHTML=`<div class="date-area"><div class="step-title">02 · ESCOLHA A DATA</div>${avail.length?`<div class="date-grid">${avail.map(d=>`<button class="date-choice ${state.date===d?'active':''}" data-date="${d}">${formatDate(d)}</button>`).join('')}</div>`:'<div class="empty-state">Essa profissional ainda não disponibilizou horários.</div>'}</div>`;
  $$('[data-date]').forEach(b=>b.onclick=()=>{state.date=b.dataset.date;state.time=null;renderBooking()});
+ 
  if(!state.date){$('#timeStep').innerHTML='';$('#clientStep').hidden=true;return}
- const entry=(p.availability||[]).find(a=>a.date===state.date);const booked=(db()?.bookings||[]).filter(b=>b.proId===p.id&&b.date===state.date).map(b=>b.time);const times=(entry?.times||[]).filter(t=>!booked.includes(t)).sort();
+ const entry=(p.availability||[]).find(a=>a.date===state.date);
+ const booked=(db()?.bookings||[]).filter(b=>b.proId===p.id&&b.date===state.date).map(b=>b.time);
+ const times=(entry?.times||[]).filter(t=>!booked.includes(t)).sort();
+ 
  $('#timeStep').innerHTML=`<div class="time-area"><div class="step-title">03 · HORÁRIO DISPONÍVEL</div>${times.length?`<div class="time-grid">${times.map(t=>`<button class="time-choice ${state.time===t?'active':''}" data-time="${t}">${t}</button>`).join('')}</div>`:'<div class="empty-state">Todos os horários dessa data já estão ocupados.</div>'}</div>`;
  $$('[data-time]').forEach(b=>b.onclick=()=>{state.time=b.dataset.time;renderBooking()});
+ 
  if(!state.time){$('#clientStep').hidden=true;return}
  if(isPromo && promo && promo.currentIndex===0){
    $('#clientStep').hidden=false;
@@ -57,14 +110,21 @@ function renderProfessionalBooking(p,isPromo){
    $('#nextPromoStep').onclick=()=>{promo.selections[0]={proId:p.id,service:s.name,date:state.date,time:state.time};promo.currentIndex=1;state.pro=promo.partnerProId;state.service=null;state.date=null;state.time=null;renderBooking()};
    return;
  }
+ 
  $('#clientStep').hidden=false;
  const linkedPromo=p.promo?`<div class="summary"><b>Promoção:</b> ${esc(p.promo)}${p.promoTerms?`<br>${esc(p.promoTerms)}`:''}</div>`:'';
  const req=p.bookingRequirements?`<div class="summary"><b>Orientações para confirmar</b><br>${esc(p.bookingRequirements)}<br><small>Prazo: ${esc(p.confirmationDeadline||'Assim que possível')}</small></div>`:'';
  const promoSummary=promo?`<div class="summary"><b>✨ Combo completo</b><br>${esc(getProfessionals().find(x=>x.id===promo.originProId)?.name||'Profissional 1')} + ${esc(getProfessionals().find(x=>x.id===promo.partnerProId)?.name||'Profissional 2')}<br><small>Os dois horários serão registrados juntos para a mesma cliente.</small></div>`:'';
+ 
  $('#clientStep').innerHTML=`<div class="client-area"><div class="step-title">04 · ${promo?'CONFIRME OS DOIS AGENDAMENTOS':'CONFIRME SEU PEDIDO'}</div>${promo?promoSummary:''}<div class="summary"><b>${esc(p.name)}</b> · ${esc(s.name)} · ${formatDate(state.date)} às ${esc(state.time)}</div>${linkedPromo}${req}<form class="client-form" id="clientForm"><label>Seu nome<input name="nome" required placeholder="Seu nome"></label><label>WhatsApp<input name="whatsapp" required placeholder="(11) 99999-9999"></label><textarea name="observacao" rows="2" placeholder="Observação (opcional)"></textarea><button class="button" type="submit">${promo?'Confirmar os dois horários →':'Solicitar este horário →'}</button></form></div>`;
  $('#clientForm').onsubmit=e=>submitBooking(e,p,s);
 }
-function formatDate(d){const [y,m,day]=d.split('-');return new Date(Number(y),Number(m)-1,Number(day)).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'}).replace('.','')}
+
+function formatDate(d){
+  const [y,m,day]=d.split('-');
+  return new Date(Number(y),Number(m)-1,Number(day)).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'}).replace('.','');
+}
+
 function submitBooking(e,p,s){
  e.preventDefault();const f=new FormData(e.target),d=db()||{professionals:[],bookings:[]};d.bookings=d.bookings||[];const now=Date.now();
  const base={name:f.get('nome'),whatsapp:f.get('whatsapp'),observacao:f.get('observacao')||''};
@@ -80,4 +140,8 @@ function submitBooking(e,p,s){
  const msg=`Olá! Novo agendamento na A&G Beauty.%0A%0ACliente: ${encodeURIComponent(base.name)}%0AServiço: ${encodeURIComponent(s.name)}%0AData: ${encodeURIComponent(formatDate(state.date))}%0AHorário: ${encodeURIComponent(state.time)}%0AWhatsApp: ${encodeURIComponent(base.whatsapp)}%0AOrientações: ${encodeURIComponent(p.bookingRequirements||'Sem exigências adicionais')}%0APrazo de confirmação: ${encodeURIComponent(p.confirmationDeadline||'Assim que possível')}`;
  const phone=p.confirmationWhatsapp||'';const url=phone?`https://wa.me/${phone.replace(/\D/g,'')}?text=${msg}`:'';showSuccess('Solicitação registrada!',phone?'O horário foi reservado. A mensagem de confirmação está pronta para a profissional.':'O horário foi reservado no sistema. A profissional poderá consultar a agenda.',phone?[{label:`Enviar confirmação para ${p.name}`,url}]:[]);if(url)window.open(url,'_blank');
 }
-function showSuccess(title,text,links=[]){$('#serviceStep').innerHTML=`<div class="success-booking"><div class="check">✓</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${links.map(l=>`<a class="button" target="_blank" rel="noopener" href="${l.url}">${esc(l.label)} ↗</a>`).join('')}<button class="button" onclick="closeBooking()">Fechar</button></div>`;$('#dateStep').innerHTML='';$('#timeStep').innerHTML='';$('#clientStep').hidden=true;$('#professionalsList').innerHTML=''}
+
+function showSuccess(title,text,links=[]){
+  $('#serviceStep').innerHTML=`<div class="success-booking"><div class="check">✓</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${links.map(l=>`<a class="button" target="_blank" rel="noopener" href="${l.url}">${esc(l.label)} ↗</a>`).join('')}<button class="button" onclick="closeBooking()">Fechar</button></div>`;
+  $('#dateStep').innerHTML='';$('#timeStep').innerHTML='';$('#clientStep').hidden=true;$('#professionalsList').innerHTML='';
+}
